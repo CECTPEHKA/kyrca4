@@ -64,3 +64,5 @@ C:\Users\cectpa\source\repos\MyMediaLibrary\MyMediaLibrary\obj\Debug\net6.0-wind
 C:\Users\cectpa\source\repos\MyMediaLibrary\MyMediaLibrary\obj\Debug\net6.0-windows\MyMediaLibrary.pdb
 C:\Users\cectpa\source\repos\MyMediaLibrary\MyMediaLibrary\obj\Debug\net6.0-windows\MyMediaLibrary.genruntimeconfig.cache
 C:\Users\cectpa\source\repos\MyMediaLibrary\MyMediaLibrary\obj\Debug\net6.0-windows\ref\MyMediaLibrary.dll
+C:\Users\cectpa\source\repos\MyMediaLibrary\MyMediaLibrary\obj\Debug\net6.0-windows\MyMediaLibrary.sourcelink.json
+C:\Users\cectpa\source\repos\MyMediaLibrary\MyMediaLibrary\obj\Debug\net6.0-windows\MyMediaLibrary_MarkupCompile.lref

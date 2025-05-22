@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Windows;
-using MyMediaLibraryModels;
+using MyMediaLibrary.Models;
 
 namespace MyMediaLibrary
 {
