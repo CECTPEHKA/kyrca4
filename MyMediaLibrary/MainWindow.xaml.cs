@@ -12,96 +12,21 @@ namespace MyMediaLibrary
 {
     public partial class MainWindow : Window
     {
-        private readonly ObservableCollection<MediaItem> _mediaItems;
-        private readonly MediaLibraryContext _dbContext;
+        private ObservableCollection<MediaItem> _mediaItems;
+        private MediaLibraryContext _dbContext;
 
         public MainWindow()
         {
             InitializeComponent();
-            _dbContext = new MediaLibraryContext();
-            _mediaItems = new ObservableCollection<MediaItem>();
-            MediaListView.ItemsSource = _mediaItems;
+            InitializeDatabase();
             LoadData();
         }
 
-        private void LoadData()
+        private void InitializeDatabase()
         {
-            try
-            {
-                _mediaItems.Clear();
-                foreach (var item in _dbContext.MediaItems.ToList())
-                {
-                    _mediaItems.Add(item);
-                }
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Ошибка загрузки: {ex.Message}", "Ошибка",
-                              MessageBoxButton.OK, MessageBoxImage.Error);
-            }
+            _dbContext = new MediaLibraryContext();
+            _dbContext.Database.EnsureCreated();
         }
-
-        // ОБНОВЛЕННЫЙ метод для чекбокса
-        private void VisitedCheckBox_Click(object sender, RoutedEventArgs e)
-        {
-            if (sender is CheckBox checkBox && checkBox.DataContext is MediaItem item)
-            {
-                item.IsVisited = checkBox.IsChecked ?? false;
-
-                try
-                {
-                    using (var db = new MediaLibraryContext())
-                    {
-                        var dbItem = db.MediaItems.Find(item.Id);
-                        if (dbItem != null)
-                        {
-                            dbItem.IsVisited = item.IsVisited;
-                            db.SaveChanges();
-                        }
-                    }
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show($"Ошибка сохранения: {ex.Message}", "Ошибка",
-                                  MessageBoxButton.OK, MessageBoxImage.Error);
-                }
-            }
-        }
-
-        // ОБНОВЛЕННЫЙ метод для звёзд
-        private void RatingStar_Click(object sender, RoutedEventArgs e)
-        {
-            if (sender is Button button &&
-                button.Tag is string tagStr &&
-                double.TryParse(tagStr, out double newRating) &&
-                button.DataContext is MediaItem item)
-            {
-                bool isHalfRating = Keyboard.IsKeyDown(Key.LeftCtrl) ||
-                                   Keyboard.IsKeyDown(Key.RightCtrl);
-
-                item.Rating = isHalfRating ? newRating - 0.5 : newRating;
-
-                try
-                {
-                    var dbItem = _dbContext.MediaItems.Find(item.Id);
-                    if (dbItem != null)
-                    {
-                        dbItem.Rating = item.Rating;
-                        _dbContext.SaveChanges();
-
-                        // Принудительное обновление `ListView`
-                        RefreshListView();
-                    }
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show($"Ошибка сохранения рейтинга: {ex.Message}", "Ошибка",
-                        MessageBoxButton.OK, MessageBoxImage.Error);
-                }
-            }
-        }
-
-
         private async void SearchBook_Click(object sender, RoutedEventArgs e)
         {
             if (string.IsNullOrWhiteSpace(SearchTextBox.Text))
@@ -138,27 +63,47 @@ namespace MyMediaLibrary
             }
         }
 
-
-        private void CheckBox_Click(object sender, RoutedEventArgs e)
+        private void LoadData()
         {
-            if (sender is CheckBox checkBox && checkBox.DataContext is MediaItem item)
+            try
             {
-                try
+                _mediaItems = new ObservableCollection<MediaItem>(_dbContext.MediaItems.ToList());
+                MediaListView.ItemsSource = _mediaItems;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Ошибка загрузки: {ex.Message}", "Ошибка",
+                              MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private void DeleteMenuItem_Click(object sender, RoutedEventArgs e)
+        {
+            if (MediaListView.SelectedItem is not MediaItem selectedItem) return;
+
+            var confirm = MessageBox.Show($"Удалить '{selectedItem.Title}'?",
+                                        "Подтверждение",
+                                        MessageBoxButton.YesNo);
+            if (confirm != MessageBoxResult.Yes) return;
+
+            try
+            {
+                using (var db = new MediaLibraryContext())
                 {
-                    var dbItem = _dbContext.MediaItems.Find(item.Id);
-                    if (dbItem != null)
+                    var itemToDelete = db.MediaItems.Find(selectedItem.Id);
+                    if (itemToDelete != null)
                     {
-                        dbItem.IsVisited = checkBox.IsChecked ?? false;
-                        _dbContext.SaveChanges();
+                        db.MediaItems.Remove(itemToDelete);
+                        db.SaveChanges();
                     }
                 }
-                catch (Exception ex)
-                {
-                    MessageBox.Show($"Ошибка сохранения: {ex.Message}", "Ошибка",
-                        MessageBoxButton.OK, MessageBoxImage.Error);
-                }
+                LoadData();
             }
-            e.Handled = true;
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Ошибка удаления: {ex.Message}", "Критическая ошибка",
+                              MessageBoxButton.OK, MessageBoxImage.Error);
+            }
         }
 
         private void EditMenuItem_Click(object sender, RoutedEventArgs e)
@@ -170,16 +115,22 @@ namespace MyMediaLibrary
             {
                 try
                 {
-                    var dbItem = _dbContext.MediaItems.Find(selectedItem.Id);
-                    if (dbItem != null)
+                    using (var db = new MediaLibraryContext())
                     {
-                        dbItem.Title = editWindow.MediaItem.Title;
-                        dbItem.Author = editWindow.MediaItem.Author;
-                        dbItem.Genre = editWindow.MediaItem.Genre;
-                        dbItem.Description = editWindow.MediaItem.Description;
-                        _dbContext.SaveChanges();
-                        RefreshListView();
+                        var dbItem = db.MediaItems.Find(selectedItem.Id);
+                        if (dbItem != null)
+                        {
+                            dbItem.Title = editWindow.MediaItem.Title;
+                            dbItem.Genre = editWindow.MediaItem.Genre;
+                            dbItem.Author = editWindow.MediaItem.Author;
+                            db.SaveChanges();
+                        }
                     }
+
+                    // Принудительно обновляем UI
+                    selectedItem.Title = editWindow.MediaItem.Title;
+                    selectedItem.Genre = editWindow.MediaItem.Genre;
+                    selectedItem.Author = editWindow.MediaItem.Author;
                 }
                 catch (Exception ex)
                 {
@@ -189,41 +140,61 @@ namespace MyMediaLibrary
             }
         }
 
-        private void DeleteMenuItem_Click(object sender, RoutedEventArgs e)
+
+        private void VisitedCheckBox_Click(object sender, RoutedEventArgs e)
         {
-            if (MediaListView.SelectedItem is not MediaItem selectedItem) return;
-
-            var confirm = MessageBox.Show(
-                $"Удалить '{selectedItem.Title}'?",
-                "Подтверждение удаления",
-                MessageBoxButton.YesNo,
-                MessageBoxImage.Question);
-
-            if (confirm == MessageBoxResult.Yes)
+            if (sender is CheckBox checkBox && checkBox.DataContext is MediaItem item)
             {
                 try
                 {
-                    _dbContext.MediaItems.Remove(selectedItem);
-                    _dbContext.SaveChanges();
-                    _mediaItems.Remove(selectedItem);
+                    using (var db = new MediaLibraryContext())
+                    {
+                        var dbItem = db.MediaItems.Find(item.Id);
+                        if (dbItem != null)
+                        {
+                            dbItem.IsVisited = checkBox.IsChecked ?? false;
+                            db.SaveChanges();
+                        }
+                    }
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show($"Ошибка удаления: {ex.Message}", "Ошибка",
-                        MessageBoxButton.OK, MessageBoxImage.Error);
+                    MessageBox.Show($"Ошибка сохранения: {ex.Message}", "Ошибка",
+                                  MessageBoxButton.OK, MessageBoxImage.Error);
                 }
             }
         }
 
-        private void RefreshListView()
+        private void RatingStar_Click(object sender, RoutedEventArgs e)
         {
-            var tempList = new ObservableCollection<MediaItem>(_dbContext.MediaItems.ToList());
-            MediaListView.ItemsSource = null;
-            MediaListView.ItemsSource = tempList;
-            _mediaItems.Clear();
-            foreach (var item in tempList)
+            if (sender is Button button &&
+                button.Tag is string tagStr &&
+                double.TryParse(tagStr, out double newRating) &&
+                button.DataContext is MediaItem item)
             {
-                _mediaItems.Add(item);
+                bool isHalfRating = Keyboard.IsKeyDown(Key.LeftCtrl) ||
+                                   Keyboard.IsKeyDown(Key.RightCtrl);
+
+                item.Rating = isHalfRating ? newRating - 0.5 : newRating;
+
+                try
+                {
+                    using (var db = new MediaLibraryContext())
+                    {
+                        var dbItem = db.MediaItems.Find(item.Id);
+                        if (dbItem != null)
+                        {
+                            dbItem.Rating = item.Rating;
+                            db.SaveChanges();
+                        }
+                    }
+                    LoadData();
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Ошибка сохранения рейтинга: {ex.Message}", "Ошибка",
+                        MessageBoxButton.OK, MessageBoxImage.Error);
+                }
             }
         }
     }

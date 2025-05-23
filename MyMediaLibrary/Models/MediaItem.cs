@@ -1,9 +1,10 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace MyMediaLibrary.Models
 {
-    public class MediaItem
+    public class MediaItem : INotifyPropertyChanged
     {
         [Key]
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
@@ -11,22 +12,76 @@ namespace MyMediaLibrary.Models
 
         [Required(ErrorMessage = "Название обязательно")]
         [MaxLength(200)]
-        public string Title { get; set; }
+        private string _title;
+        public string Title
+        {
+            get => _title;
+            set
+            {
+                if (_title != value)
+                {
+                    _title = value;
+                    OnPropertyChanged(nameof(Title));
+                }
+            }
+        }
 
         [MaxLength(100)]
-        public string Author { get; set; } = "Неизвестный автор";
+        private string _author = "Неизвестный автор";
+        public string Author
+        {
+            get => _author;
+            set
+            {
+                if (_author != value)
+                {
+                    _author = value;
+                    OnPropertyChanged(nameof(Author));
+                }
+            }
+        }
 
         [MaxLength(50)]
-        public string Genre { get; set; } = "Книга";
+        private string _genre = "Книга";
+        public string Genre
+        {
+            get => _genre;
+            set
+            {
+                if (_genre != value)
+                {
+                    _genre = value;
+                    OnPropertyChanged(nameof(Genre));
+                }
+            }
+        }
 
         public string Description { get; set; }
         public bool IsVisited { get; set; }
 
         [Required]
         [Column(TypeName = "REAL")]
-        public double Rating { get; set; } = 0.0;
+        private double _rating = 0.0;
+        public double Rating
+        {
+            get => _rating;
+            set
+            {
+                if (_rating != value)
+                {
+                    _rating = value;
+                    OnPropertyChanged(nameof(Rating));
+                }
+            }
+        }
 
         [MaxLength(500)]
         public string ImagePath { get; set; }
+
+        public event PropertyChangedEventHandler PropertyChanged;
+        protected void OnPropertyChanged(string propertyName)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        }
     }
 }
